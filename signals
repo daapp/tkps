@@ -1,0 +1,89 @@
+#!/usr/bin/tclsh
+#Signal values
+set SIGNALS(HUP)     1
+set SIGNALS(INT)     2
+set SIGNALS(QUIT)    3
+set SIGNALS(ILL)     4
+set SIGNALS(TRAP)    5
+set SIGNALS(ABRT)    6
+set SIGNALS(IOT)     6
+set SIGNALS(BUS)     7
+set SIGNALS(FPE)     8
+set SIGNALS(KILL)    9
+set SIGNALS(USR1)   10
+set SIGNALS(SEGV)   11
+set SIGNALS(USR2)   12
+set SIGNALS(PIPE)   13
+set SIGNALS(ALRM)   14
+set SIGNALS(TERM)   15
+set SIGNALS(STKFLT) 16
+set SIGNALS(CHLD)   17
+set SIGNALS(CONT)   18
+set SIGNALS(STOP)   19
+set SIGNALS(TSTP)   20
+set SIGNALS(TTIN)   21
+set SIGNALS(TTOU)   22
+set SIGNALS(URG)    23
+set SIGNALS(XCPU)   24
+set SIGNALS(XFSZ)   25
+set SIGNALS(VTALRM) 26
+set SIGNALS(PROF)   27
+set SIGNALS(WINCH)  28
+set SIGNALS(IO)     29
+set SIGNALS(POLL)   29
+set SIGNALS(LOST)   29
+set SIGNALS(PWR)    30
+
+proc get_sig_masks { pid } {
+  global sig_masks
+  set f [ open "| grep Sig /proc/$pid/status" ]
+  while { [ eof $f ] == 0 } {
+    scan [gets $f ] "%s %x" s d
+    set sig_masks($s) $d 
+  }
+}
+
+proc fmt_sig_mask { mask }  {
+  global SIGNALS
+  set fmt_mask ""
+  foreach signame [ array names SIGNALS ] {
+    if { ((1 << ($SIGNALS($signame)) - 1) & $mask) != 0 } then {
+      if { $fmt_mask != "" } then {
+        set fmt_mask [ format "%s,%s" $fmt_mask $signame ] 
+      } else {
+        set fmt_mask $signame
+      }
+    }
+  }
+  return $fmt_mask
+}
+
+set pid [ lrange $argv 0 0 ]
+if { [ file exists /proc/$pid/status ] == 0 } then {
+  exit 1
+}
+
+get_sig_masks [ lrange $argv 0 0 ]
+
+set sig_mask_fmt [ fmt_sig_mask $sig_masks(SigPnd:) ]
+if { $sig_mask_fmt == "" } then {
+  puts "Signals Pending: none" } else {
+  puts [ format "Signals Pending: %s" $sig_mask_fmt ]
+}
+
+set sig_mask_fmt [ fmt_sig_mask $sig_masks(SigBlk:) ]
+if { $sig_mask_fmt == "" } then {
+  puts "Signals Blocked: none" } else {
+  puts [ format "Signals Blocked: %s" $sig_mask_fmt ]
+}
+
+set sig_mask_fmt [ fmt_sig_mask $sig_masks(SigIgn:) ]
+if { $sig_mask_fmt == "" } then {
+  puts "Signals Ignored: none" } else {
+  puts [ format "Signals Ignored: %s" $sig_mask_fmt ] 
+}
+set sig_mask_fmt [ fmt_sig_mask $sig_masks(SigCgt:) ]
+if { $sig_mask_fmt == "" } then {
+  puts "Signals Caught: none" } else {
+  puts [ format "Signals Caught: %s" $sig_mask_fmt ] 
+}

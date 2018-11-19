@@ -1,0 +1,21 @@
+*Menubutton.font: fixed
+*Menu.font: fixed
+*Menu.tearOff: false
+*Button.font: fixed
+*Scrollbar.borderWidth: 1
+*list.font: fixed
+*list.width: 140
+*list.height: 25
+*header.font: fixed
+*sortoptions.background: lightblue
+*com_signals*background: lightblue
+*all_signals*background: lightblue
+*posix_signals*background: lightblue
+*findbar.borderWidth: 2
+*findbar.relief: groove
+*statusbar.borderWidth: 2
+*statusbar.relief: groove
+*statusbar.clock.borderWidth: 2
+*statusbar.clock.relief: sunken
+*process.text.font: fixed
+

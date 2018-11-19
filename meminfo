@@ -1,0 +1,17 @@
+#!/usr/bin/tclsh
+
+set pid [ lrange $argv 0 0 ]
+catch {
+  set statfd [ open "/proc/$pid/status" ]
+  set title "\nMemory Usage:\n"
+  while { [ set statline [ gets $statfd ] ] != "" } {
+    if [ regexp "^Vm" $statline ] then {
+      if { $title != "" } then {
+	puts $title
+	set title ""
+      }
+      puts $statline
+    }
+  }
+  close $statfd
+}

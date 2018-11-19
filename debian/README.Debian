@@ -1,0 +1,16 @@
+tkps for DEBIAN
+----------------------
+
+Comments regarding the Package
+
+This program is derived from a script originally written by 
+Henry Minsky <hqm@ai.mit.edu>. Originally, it was strictly a front end
+for the "ps" command but has since been enhanced to provide process specific
+information using the /proc filesystem. Since /proc doesn't exist on all
+UNIX platforms, these functions were isolated into separate scripts which 
+could be rewritten using /kmem or whatever is appropriate. The intention was
+to make tkps usable on any UNIX system equipped with Tcl/Tk. Anyone wishing
+to volunteer time or access to other UNIX systems please send email to 
+Ed Petron <epetron@leba.net>.
+
+Ed Petron <epetron@leba.net>, Sun,  4 Jan 1998 14:55:52 -0500

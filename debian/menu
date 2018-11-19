@@ -1,0 +1,2 @@
+?package(tkps): needs="X11" section="Apps/System" \
+  title="tkps" command="/usr/bin/tkps"
