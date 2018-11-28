@@ -1,6 +1,5 @@
 *Menubutton.font: fixed
 *Menu.font: fixed
-*Menu.tearOff: false
 *Button.font: fixed
 *Scrollbar.borderWidth: 1
 *list.font: fixed
