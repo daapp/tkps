@@ -29,6 +29,7 @@ package require widget::dialog
 package require tablelist
 package require textutil
 package require fileutil
+package require lambda
 
 namespace import tkapp::w
 
@@ -269,10 +270,10 @@ set list_which_signals $common_ps_keywords
 
 
 # add one menu entry for each signal 
-proc add_items {menu items} {
+proc addItems {menu items} {
     foreach entry $items {
         set signame [lindex $entry 0]
-        $menu add command -label $entry -command [list send_signal $signame]
+        $menu add command -label $entry -command [list sendSignal $signame]
     }
 }
 
@@ -289,7 +290,7 @@ proc stringToList {str parts} {
 
 # This runs ps and gets the results into a list of entries.
 # FILTER is a variable used to filter the results, a la grep.  
-proc get_unix_procs {filter} {
+proc getUnixProcs {filter} {
     global ps_args
     global sortoption
 
@@ -337,10 +338,10 @@ proc get_unix_procs {filter} {
     focus [w pstable]
 }
 
-proc update_unix_procs {} {
+proc updateUnixProcs {} {
     variable greppat
 
-    get_unix_procs $greppat
+    getUnixProcs $greppat
 }
 
 ################################################################
@@ -350,7 +351,7 @@ proc update_unix_procs {} {
 # Returns 1 if proceed, 0 if cancel
 #
 
-proc confirm_dialog {signame pids} {
+proc confirmDialog {signame pids} {
     set dialog [widget::dialog [w tkps].sendSignalConfirm \
                     -modal local \
                     -separator 1 \
@@ -374,7 +375,7 @@ proc confirm_dialog {signame pids} {
 
    
 ################################################################
-proc msg_dialog {msg} {
+proc msgDialog {msg} {
     widget::dialog [w message [w tkps].message]\
         -modal local \
         -title Help \
@@ -393,8 +394,8 @@ proc msg_dialog {msg} {
 }
 
 
-proc help_dialog {} {
-    msg_dialog {This program will send a signal to the selected process. There \
+proc showHelp {} {
+    msgDialog {This program will send a signal to the selected process. There \
 are several equivalent ways to choose a signal to send. \
 
 First, select a process from the list below, then select a signal to send to \
@@ -423,8 +424,8 @@ The Options menu contains some configuration settings.
 
 }
 
-proc about_box {} {
-    msg_dialog [format {
+proc showAbout {} {
+    msgDialog [format {
 The tkps browser was written by 
 Ed Petron (epetron@leba.net)
 Kidong Lee (kidong@shinbiro.com)
@@ -440,7 +441,7 @@ Terms of the GNU Public License apply.
 
 ################################################################
 # This ought to be a generic program to change a variable's value
-proc change_update_period {} {
+proc changeUpdatePeriod {} {
     global UPDATE_PERIOD MIN_UPDATE_PERIOD update_time
     global prompt
 
@@ -470,7 +471,7 @@ proc change_update_period {} {
 
     # Don't let the updates go too fast.
     if {$button eq "ok"} {
-        if {$update_time < $MIN_UPDATE_PERIOD} {
+        if {![string is integer -strict $update_time] || $update_time < $MIN_UPDATE_PERIOD} {
             set UPDATE_PERIOD $MIN_UPDATE_PERIOD
         } else {
             set UPDATE_PERIOD $update_time
@@ -483,7 +484,7 @@ proc change_update_period {} {
 ################################################################
 # Dialog to change args to ps. This should call a dialog subroutine.
 #
-proc change_ps_args {} {
+proc changePsArgs {} {
     global ps_args args DEFAULT_PS_ARGS
     global prompt
 
@@ -497,7 +498,6 @@ proc change_ps_args {} {
 
     set args $ps_args
     set prev_ps_args $ps_args
-    # create top level window
 
     set f [[w args] getframe]
         
@@ -506,7 +506,6 @@ proc change_ps_args {} {
     
     pack $f.argsLabel -side left
     pack $f.args -side right
-    
 
     set button [[w args] display]
     destroy [w args]
@@ -522,47 +521,111 @@ proc change_ps_args {} {
         set ps_args $prev_ps_args
     }
 
-    update_unix_procs
+    updateUnixProcs
 }
+
+# table - list of lists (table of data)
+# align - list of align instruction: left or right
+# separator - between columns
+# rowPrefix - string before first column
+# rowSuffix - string after last column
+proc tableToText {table aligns {separator " "} {rowPrefix ""} {rowSuffix ""}} {
+    set row2lengths [lambda {row} {lmap val $row {string length $val}}]
+    set selectMax [lambda {l1 l2} {lmap a $l1 b $l2 {expr {max($a, $b)}}}]
+    set sizes [{*}$row2lengths [lindex $table 0]]
+    
+    foreach row [lrange $table 1 end] {
+	set lengths [{*}$row2lengths $row]
+	set sizes [{*}$selectMax $sizes $lengths]
+    }
+
+    set formats [list]
+    foreach size $sizes align $aligns {
+	switch -- $align {
+	    left {
+		lappend formats %-${size}s
+	    }
+	    right {
+		lappend formats %${size}s
+	    }
+	    default {
+		error "invalid align \"$align\": should be left or right"
+	    }
+	}
+    }
+    set rowFormat "$rowPrefix[join $formats $separator]$rowSuffix"
+
+    return [join [lmap row $table { format $rowFormat {*}$row }] \n]
+}
+
 
 ################################################################
 # Routines to display a popup text widget with detailed info on a process
 
 
-proc fill_info_window {pid widget} {
-    global application
+proc fillInfoWindow {widget pid} {
+    set family TkFixedFont
+    $widget configure -font $family
+    
+    $widget tag delete {*}[$widget tag names]
+    $widget tag configure header -font "$family -18 bold" -lmargin1 30
+    $widget tag configure child -foreground blue
 
-    set pidStatus [fileutil::cat /proc/$pid/status]
-    set pidInfo [lrange [split $pidStatus \n] 0 2]
-    set memInfo "Memory usage:\n[join [lsearch -all -inline {^Vm} $pidStatus] \n]"
+    set status [split [fileutil::cat [file join /proc $pid status]] \n]
+    set pidInfo [lrange $status 0 2]
     
     $widget configure -state normal
     $widget delete 1.0 end
-    $widget insert end [join $pidInfo \n]
-    $widget insert end "\n"
-    set proc_fd [ open "|ps aux -p $pid" ]
+
+    set procTable [list [list PID: $pid]]
+    foreach l $pidInfo {
+        set value [lassign $l key]
+        lappend procTable [list $key $value]
+    }
+
+    lappend procTable {{} {}}
+
+    set proc_fd [ open "|ps -p $pid -u" ]
     gets $proc_fd ps_header
     gets $proc_fd ps_line
     close $proc_fd
-    set user [ lookup_proc_state $ps_header $ps_line USER ]
-    set cpu [ lookup_proc_state $ps_header $ps_line %CPU ]
-    set mem [ lookup_proc_state $ps_header $ps_line %MEM ]
-    $widget insert end [ format "User:   %s\n" $user ]
-    $widget insert end [ format "CPU%s:   %s\n" "%" $cpu ]
-    $widget insert end [ format "MEM%s:   %s\n" "%" $mem ]
-    
-    $widget insert end $memInfo\n
-    $widget insert end "\n\n"
-#    $widget insert end [exec /usr/share/$application/signals $pid]
+    # create dictionary from headers and values
+    set procState [dict create {*}[concat {*}[lmap k $ps_header v $ps_line {list $k $v}]]]
+
+    lappend procTable \
+        [list User: [dict get $procState USER]] \
+        [list CPU%: [dict get $procState %CPU]] \
+        [list MEM%: [dict get $procState %MEM]]
+
+    $widget insert end [tableToText $procTable {left left}]\n\n
+
+    # replace zero character with space
+    $widget insert end "Command line" header \
+        \n[string map [list \u0000 { }] [fileutil::cat [file join /proc $pid cmdline]]]\n\n
+
+    set tasks [glob -nocomplain -type d -tails -directory [file join /proc $pid task] {[0-9]*}]
+    if {[llength $tasks] > 0} {
+        $widget insert end "Tasks" header \n
+        foreach task $tasks {
+            $widget insert end "task " {} $task task " children: " {}
+            foreach child [fileutil::cat [file join /proc $pid task $task children]] {
+                $widget tag bind child-$child <Any-Enter> "$widget tag configure child-$child -foreground red"
+                $widget tag bind child-$child <Any-Leave> "$widget tag configure child-$child -foreground blue"
+                $widget tag bind child-$child <1> [list fillInfoWindow $widget $child]
+
+                $widget insert end $child [list child child-$child] " "
+            }
+            $widget insert end "\n"
+        }
+    }
+    $widget insert end \n
+
+    $widget insert end "Memory usage" header \n
+    $widget insert end [tableToText [lsearch -all -inline -regexp $status {^Vm}] {left right left}]
+
     $widget configure -state disabled
 }
 
-proc show_pinfo {} {
-    set sp [selected_processes]
-    foreach p $sp { 
-        show_detailed_proc $p
-    }
-}
 
 namespace eval ::ps {
     # Signal values
@@ -603,111 +666,6 @@ namespace eval ::ps {
     }
 }
 
-proc ::ps::get_parent_pid {pid} {
-    return [lindex [regexp -inline {PPid:\s+(\d+)} [fileutil::cat /proc/$pid/status]] 1]
-}
-
-proc ::ps::family {pid} {
-    set pattern {[0-9]}
-    set children ""
-    foreach f [glob /proc/$pattern*] {
-        set f [file tail $f]
-        set parent [get_parent_pid $f]
-        if {$parent == $pid} {
-            set children [format "%s %s" $children $f]
-        }
-    }
-
-    return [list [get_parent_pid $pid] [string trim $children]]
-}
-
-proc ::ps::get_sig_masks {pid} {
-    
-}
-
-proc ::ps::signals {pid} {
-    variable SIGNALS
-
-    
-}
-
-proc get_family_info {pid} {
-    return [ps::family $pid]
-}
-
-proc build_child_list {plist widget} {
-    $widget delete 0 end
-    foreach p [lindex $plist end] {
-        $widget insert end $p
-    }
-}
-
-proc show_child_detail {widget} {
-    show_detailed_proc [$widget get [$widget curselection]]
-}
-
-proc show_detailed_proc {pid} {
-    set w [widget::dialog [w tkps].pinfo$pid \
-               -modal local \
-               -separator 1 \
-               -type custom \
-               -parent [w tkps] \
-               -padding 10 \
-               -title "Process $pid Info"]
-
-    set family [get_family_info $pid]
-
-    set ppid [lrange $family 0 0]
-
-    set mf [$w getframe]
-
-    labelframe $mf.process -text Process:
-    text $mf.process.text -yscrollcommand [list $mf.process.scroll set]
-    scrollbar $mf.process.scroll -command [list $mf.process.text yview]
- 
-    fill_info_window $pid $mf.process.text
- 
-    grid $mf.process.text -sticky news
-    grid $mf.process.scroll -row 0 -column 1 -sticky ns
-    grid columnconfigure $mf.process 0 -weight 1
-    grid rowconfigure $mf.process 0 -weight 1
-    
-    labelframe $mf.fam -text Family:
-    label $mf.fam.parent_label -text "Parent PID:"
-    button $mf.fam.parent_button -text $ppid
-    grid $mf.fam.parent_label
-    grid $mf.fam.parent_button -row 0 -column 1 -columnspan 2 -sticky ew
-
-    label $mf.fam.children_label -text Children:
-    listbox $mf.fam.children_list -width 5 -yscrollcommand [list $mf.fam.children_scroll set]
-    scrollbar $mf.fam.children_scroll -command [list $mf.fam.children_list yview]
-    grid $mf.fam.children_label  -row 1 -column 0 -sticky n
-    grid $mf.fam.children_list   -row 1 -column 1 -sticky news
-    grid $mf.fam.children_scroll -row 1 -column 2 -sticky ns
-    grid rowconfigure $mf.fam 1 -weight 1
-
-    build_child_list $family $mf.fam.children_list
-
-    $w add button -text "Kill process" -underline 0 -command [list $w close kill]
-    $w add button -text "Dismiss"      -underline 0 -command [list $w close dismiss]
-
-    grid $mf.process -sticky news
-    grid $mf.fam -row 0 -column 1 -sticky ns
-    grid columnconfigure $mf 0 -weight 1
-    grid rowconfigure $mf 0 -weight 1
-
-    bind $mf.fam.parent_button <ButtonPress-1> [list show_detailed_proc $ppid]
-    bind $mf.fam.children_list <Double-ButtonPress-1> [list show_child_detail $mf.fam.children_list]
-
-    bind $w <Alt-d> [list $w close dismiss]
-    bind $w <Alt-k> [list $w close kill]
-
-    if {[$w display] eq "kill"} {
-        exec kill -KILL $pid
-    }
-    destroy $w
-}
-
 ################################################################
 # Default settings
 
@@ -736,22 +694,12 @@ set USER_SIG KILL
 # The default command line args to "ps"
 set DEFAULT_PS_ARGS  "auxww"
 
-
-################################################################
-
-# get the doc string for a process state character (from ps -o state)
-proc lookup_proc_state { header line key } {
-    for {set i 0} {$key != [lindex $header $i] && \
-                     "" != [lindex $header $i]} {incr i}  {}
-    return [lindex $line $i]
-}
-
 ################################################################
 # Finds first entry matching $findpat 
 #
 # Also scrolls the display to make the item visible if it is not already.
 
-proc find_unix_proc {findpat} {
+proc findUnixProc {findpat} {
     set entries [[w pstable] size]
     for {set i 0} {$i < $entries} {incr i} {
         if [regexp $findpat [[w pstable] get $i]] {
@@ -766,27 +714,27 @@ proc find_unix_proc {findpat} {
 
 # Send signal looks at the currently selected entries in the listbox
 # and sends the signal to all of them.
-proc send_signal {signal} {
+proc sendSignal {signal} {
     global confirm_signals 
-    set pids [selected_processes]
+    set pids [selectedProcesses]
     set proceed 1
     if {$pids != {}} {
         if {$confirm_signals} {
-            set proceed [confirm_dialog $signal $pids]
+            set proceed [confirmDialog $signal $pids]
         }
 
         if {$proceed} {
             eval exec [format "kill -%s" $signal] $pids 
         }
 
-        update_unix_procs
+        updateUnixProcs
     }
 }
 
 
 # get the selected entries from the listbox and extract
 # the pid fields from each selection
-proc selected_processes {} {
+proc selectedProcesses {} {
     global pid_column
 
     lmap i [[w pstable] curselection] {
@@ -798,14 +746,24 @@ proc selected_processes {} {
 # The loop running in the background. 
 # We want to make sure that we don't update if there is 
 # a current selection in the window.
-proc update_loop {} {
+proc updateLoop {} {
     variable UPDATE_PERIOD
 
     if {[[w pstable] curselection] == {}} {
-        update_unix_procs
+        updateUnixProcs
     }
     set ::currenttime [clock format [clock seconds]]
-    after $UPDATE_PERIOD update_loop
+    after $UPDATE_PERIOD updateLoop
+}
+
+
+proc showProcessDescription {pid} {
+    pack [w description] -side bottom -fill both
+    fillInfoWindow [w description].process.text $pid
+}
+
+proc hideProcessDescription {} {
+    pack forget [w description]
 }
 
 
@@ -823,7 +781,7 @@ proc main {psArgs} {
         -name [option get . title Title] \
         -application TkPS \
         -defaultmenu 1 \
-        -aboutcommand about_box
+        -aboutcommand showAbout
 
     ################################################################
     # Define menu bar items
@@ -868,27 +826,26 @@ proc main {psArgs} {
     $m.options add separator
     $m.options add command \
         -label "Set Update Period..." \
-        -command change_update_period
+        -command changeUpdatePeriod
     $m.options add command \
         -label "Set 'ps' Command Line Args..." \
-        -command change_ps_args
+        -command changePsArgs
 
     menu $m.signals -tearoff 0
 
     menu $m.signals.com_signals
     $m.signals add cascade -label "Common Signals" -menu $m.signals.com_signals
-    add_items $m.signals.com_signals $common_sigs
+    addItems $m.signals.com_signals $common_sigs
 
     menu $m.signals.all_signals
     $m.signals add cascade -label "POSIX Signals" -menu $m.signals.posix_signals
-    add_items $m.signals.all_signals $all_sigs
+    addItems $m.signals.all_signals $all_sigs
 
     menu $m.signals.posix_signals
     $m.signals add cascade -label "All Signals" -menu $m.signals.all_signals
-    add_items $m.signals.posix_signals $posix_sigs
+    addItems $m.signals.posix_signals $posix_sigs
 
-
-    $m.help add command -label "Help" -command help_dialog
+    $m.help add command -label "Help" -command showHelp
 
     ################################################################
     #
@@ -897,17 +854,20 @@ proc main {psArgs} {
     #
 
     [w tkps] toolbar add label findlabel -text "Find:"
-    [w tkps] toolbar add [entry [w findentry [[w tkps] gettoolbar].findentry] \
-                              -textvariable findpat]
+    [w tkps] toolbar add \
+        [entry [w findentry [[w tkps] gettoolbar].findentry] -textvariable findpat]
     [w tkps] toolbar add label greplabel -text "Filter:"
-    [w tkps] toolbar add [entry [w filterentry [[w tkps] gettoolbar].filterentry] \
-                              -textvariable greppat]
-    [w tkps] toolbar add [ttk::button [[w tkps] gettoolbar].update \
-                              -text "Update" \
-                              -command {get_unix_procs $greppat}]
+    [w tkps] toolbar add \
+        [entry [w filterentry [[w tkps] gettoolbar].filterentry] \
+             -textvariable greppat]
+    [w tkps] toolbar add \
+        [ttk::button [[w tkps] gettoolbar].update \
+             -text "Update" \
+             -command {getUnixProcs $greppat}]
 
-    bind [w filterentry] <Return> {update_unix_procs}
-    bind [w findentry] <Return> {find_unix_proc $findpat}
+    bind [w filterentry] <Return> updateUnixProcs
+    bind [w findentry] <Return> {findUnixProc $findpat}
+    bind [w tkps] <Escape> hideProcessDescription
 
     [w tkps] toolbar add space
 
@@ -926,11 +886,33 @@ proc main {psArgs} {
         ttk::button [w signals].[string tolower $signal] \
             -text $signal \
             -underline 0 \
-            -command [list send_signal $signal]
+            -command [list sendSignal $signal]
         pack [w signals].[string tolower $signal] -side left -padx 5 -pady 5
-        bind [[w pstable] bodytag] <[string toupper $key]> [list send_signal $signal]
+        bind [[w pstable] bodytag] <[string toupper $key]> [list sendSignal $signal]
     }
     pack [w signals] -side bottom -fill x
+
+    ttk::labelframe [w description $mf.description]
+    ttk::frame [w description].title
+    ttk::label [w description].title.ldescription -text "Info: "
+    button [w description].title.hide \
+        -text "\u274c" -padx 3 -pady 0 -bg red -fg white \
+        -command hideProcessDescription
+    pack [w description].title.hide -side right -fill none -padx 3 -pady 3
+    pack [w description].title.ldescription -side right
+
+    [w description] configure -labelwidget [w description].title
+
+    set process [ttk::frame [w description].process]
+    text $process.text -yscrollcommand [list $process.scroll set] -padx 10 -pady 10
+    ttk::scrollbar $process.scroll -command [list $process.text yview]
+
+    grid $process.text -sticky nsew
+    grid $process.scroll -row 0 -column 1 -sticky ns
+    grid columnconfigure $process 0 -weight 1
+    grid rowconfigure $process 0 -weight 1
+
+    pack $process -side left -fill both -expand true
 
     [w tkps] statusbar add label -- -textvariable currenttime
 
@@ -951,21 +933,22 @@ proc main {psArgs} {
     bind [[w pstable] bodytag] <Double-Button-1> {
         set oldconfirm $confirm_signals
         set confirm_signals 1
-        foreach i [[w pstable] curselection] {show_pinfo}
+
+        showProcessDescription [lindex [[w pstable] get [lindex [[w pstable] curselection] 0]] $::pid_column]
         set confirm_signals $oldconfirm
     }
     bind [[w pstable] bodytag] <Return> {
         set oldconfirm $confirm_signals
         set confirm_signals 1
-        foreach i [[w pstable] curselection] {show_pinfo}
+        showProcessDescription [lindex [[w pstable] get [lindex [[w pstable] curselection] 0]] $::pid_column]
         set confirm_signals $oldconfirm
     }
 
-    bind [w tkps] <F1> help_dialog
+    bind [w tkps] <F1> showHelp
 
     wm withdraw .
 
-    update_loop
+    updateLoop
 }
 
 
