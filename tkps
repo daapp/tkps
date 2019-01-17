@@ -571,6 +571,9 @@ proc fillInfoWindow {widget pid} {
     $widget tag configure header -font "$family -18 bold" -lmargin1 30
     $widget tag configure child -foreground blue
 
+    if {[catch {set status [split [fileutil::cat [file join /proc $pid status]] \n]} errorMessage]} {
+        return
+    }
     set status [split [fileutil::cat [file join /proc $pid status]] \n]
     set pidInfo [lrange $status 0 2]
     
