@@ -4,12 +4,12 @@
 # Kidong Lee (kidong@shinbiro.com) May 1997
 #
 # Originally written by Henry Minsky (hqm@ai.mit.edu) May 1994
-# 
+#
 
 ################################################################
 # You can get the implementation dependent signal names for your system
 # from /usr/include/signal.h
-# 
+#
 package require Tk
 package require Ttk
 
@@ -29,7 +29,7 @@ namespace import tkapp::w
 namespace eval tkps {
     variable application tkps
     variable version 1.99
-    
+
     variable common_sigs {
         {INT         2        interupt}
         {QUIT        3        quit}
@@ -249,7 +249,7 @@ namespace eval tkps {
     # The default update time of display is 10 seconds
     # You can change it in the configure menu.
     variable MIN_UPDATE_PERIOD 2000
-    variable UPDATE_PERIOD 10000 
+    variable UPDATE_PERIOD 10000
 
     # The default double click behavior
     variable USER_SIG KILL
@@ -264,7 +264,7 @@ namespace eval tkps {
 ################################################################
 
 
-# add one menu entry for each signal 
+# add one menu entry for each signal
 proc tkps::addItems {menu items} {
     foreach entry $items {
         set signame [lindex $entry 0]
@@ -279,28 +279,28 @@ proc tkps::stringToList {str parts} {
     for {set i 0} {$i <= $parts-2} {incr i} {
         lappend r [lindex $str $i]
     }
-    lappend r [join [lrange $str $parts-2 end] { }]
+    lappend r [join [lrange $str $parts-1 end] { }]
     return $r
 }
 
 # This runs ps and gets the results into a list of entries.
-# FILTER is a variable used to filter the results, a la grep.  
+# FILTER is a variable used to filter the results, a la grep.
 proc tkps::getUnixProcs {} {
     variable ps_args
     variable sortoption
     variable greppat
 
-    # The PID column is the column which has the pid numbers in it. 
+    # The PID column is the column which has the pid numbers in it.
     # This can change depending on the options passed to 'ps'.
     variable pid_column
 
-    # save the old list scroll value 
+    # save the old list scroll value
     set oldyview [[w pstable] nearest 0]
     set oldsize [[w pstable] size]
-    
+
     # Open a pipe to the "ps" program, with some args.
-    set unix_procs_fd  [open "|ps $ps_args $sortoption"] 
-    
+    set unix_procs_fd  [open "|ps $ps_args $sortoption"]
+
     # Get the column headers, from the first line of output from ps.
     set header [gets $unix_procs_fd]
 
@@ -315,7 +315,7 @@ proc tkps::getUnixProcs {} {
         puts $header
         exit 1
     }
-    
+
     # Clear the list items.
     [w pstable] delete 0 end
     # Fill in listbox with process entries from 'ps' command output.
@@ -326,7 +326,7 @@ proc tkps::getUnixProcs {} {
     }
 
     close $unix_procs_fd
-    
+
     # if the list has not changed size much, try to preserve viewpoint
     if {abs([[w pstable] size] - $oldsize) < 2} {
         [w pstable] yview $oldyview
@@ -340,7 +340,7 @@ proc tkps::updateUnixProcs {} {
 
 ################################################################
 #
-# Dialog box for confirmation of kill command 
+# Dialog box for confirmation of kill command
 #
 # Returns 1 if proceed, 0 if cancel
 #
@@ -358,7 +358,7 @@ proc tkps::confirmDialog {signame pids} {
     label $dialog.f.header -text "Send $signame to processes $pids ?"
 
     pack $dialog.f.header -side top -fill x
-    
+
     $dialog setwidget $dialog.f
 
     set r [$dialog display]
@@ -378,7 +378,7 @@ proc tkps::msgDialog {msg} {
         -type ok \
         -padding 10
     set f [[w message] getframe]
-    
+
     message $f.msg -text $msg -aspect 200
 
     pack $f.msg -side top -fill both
@@ -395,25 +395,25 @@ are several equivalent ways to choose a signal to send. \
 First, select a process from the list below, then select a signal to send to \
 it, either using a button on the bottom of the window, or from one of the \
 signal menus. The commonly used signals have their own buttons along the \
-bottom of the window. 
+bottom of the window.
 
 It can be used shotcut key, `k' as KILL, `n' as INT, `q' as QUIT, \
 `i' as IOT, `t' as TERM, `p' as STOP, `h' as HUP signal.
 
 The signal menus contain the following (redundant) sets of signals:
- Common_Signals contains commonly used signals. 
+ Common_Signals contains commonly used signals.
  POSIX_Signals contains POSIX standard signals.
- All_signals contains all signals available. 
+ All_signals contains all signals available.
 
-The "Filter" text entry field is essentially equivalent to "ps auxww | grep foo" for some value of foo. 
+The "Filter" text entry field is essentially equivalent to "ps auxww | grep foo" for some value of foo.
 
-The "Find" entry box lets you select the first process matching the entry foo. 
+The "Find" entry box lets you select the first process matching the entry foo.
 
 The Options menu contains some configuration settings.
  "Confirm"  will pop up a dialog before executing a kill command.
  "List Common Process Info": double click on process pops up dialog of common useful process info.
  "List ALL Process Info": double click on process pops up dialog of ALL process info available through ps.
- "Set Update Period" adjusts the time between updating the display (and running "ps" again, which is expensive for some reason. 
+ "Set Update Period" adjusts the time between updating the display (and running "ps" again, which is expensive for some reason.
  "Set Command Line Args" sets the option string which is sent to ps. It defaults to "auxww" }
 
 }
@@ -422,12 +422,12 @@ proc tkps::showAbout {} {
     variable version
 
     msgDialog [format {
-The tkps browser was written by 
+The tkps browser was written by
 Ed Petron (epetron@leba.net)
 Kidong Lee (kidong@shinbiro.com)
 
 Originally written by Henry Minsky (hqm@ai.mit.edu)
-    
+
 This is Version %s, August 2001
 
 Terms of the GNU Public License apply.
@@ -461,7 +461,7 @@ proc tkps::changeUpdatePeriod {} {
 
     pack $f.updateLabel -side left
     pack [w update_period] -side right
-    
+
     set button [[w change] display]
     destroy [w change]
 
@@ -496,10 +496,10 @@ proc tkps::changePsArgs {} {
     set prev_ps_args $ps_args
 
     set f [[w args] getframe]
-        
+
     ttk::label $f.argsLabel -text {Command line args for "ps": }
     ttk::entry $f.args -textvariable [namespace current]::args
-    
+
     pack $f.argsLabel -side left
     pack $f.args -side right
 
@@ -529,25 +529,25 @@ proc tkps::tableToText {table aligns {separator " "} {rowPrefix ""} {rowSuffix "
     set row2lengths [lambda {row} {lmap val $row {string length $val}}]
     set selectMax [lambda {l1 l2} {lmap a $l1 b $l2 {expr {max($a, $b)}}}]
     set sizes [{*}$row2lengths [lindex $table 0]]
-    
+
     foreach row [lrange $table 1 end] {
-	set lengths [{*}$row2lengths $row]
-	set sizes [{*}$selectMax $sizes $lengths]
+        set lengths [{*}$row2lengths $row]
+        set sizes [{*}$selectMax $sizes $lengths]
     }
 
     set formats [list]
     foreach size $sizes align $aligns {
-	switch -- $align {
-	    left {
-		lappend formats %-${size}s
-	    }
-	    right {
-		lappend formats %${size}s
-	    }
-	    default {
-		error "invalid align \"$align\": should be left or right"
-	    }
-	}
+        switch -- $align {
+            left {
+                lappend formats %-${size}s
+            }
+            right {
+                lappend formats %${size}s
+            }
+            default {
+                error "invalid align \"$align\": should be left or right"
+            }
+        }
     }
     set rowFormat "$rowPrefix[join $formats $separator]$rowSuffix"
 
@@ -562,7 +562,7 @@ proc tkps::tableToText {table aligns {separator " "} {rowPrefix ""} {rowSuffix "
 proc tkps::fillInfoWindow {widget pid} {
     set family TkFixedFont
     $widget configure -font $family
-    
+
     $widget tag delete {*}[$widget tag names]
     $widget tag configure header -font "$family -18 bold" -lmargin1 30
     $widget tag configure child -foreground blue
@@ -572,7 +572,7 @@ proc tkps::fillInfoWindow {widget pid} {
     }
     set status [split [fileutil::cat [file join /proc $pid status]] \n]
     set pidInfo [lrange $status 0 2]
-    
+
     $widget configure -state normal
     $widget delete 1.0 end
 
@@ -627,7 +627,7 @@ proc tkps::fillInfoWindow {widget pid} {
 
 
 ################################################################
-# Finds first entry matching $findpat 
+# Finds first entry matching $findpat
 #
 # Also scrolls the display to make the item visible if it is not already.
 
@@ -647,7 +647,7 @@ proc tkps::findUnixProc {findpat} {
 # Send signal looks at the currently selected entries in the listbox
 # and sends the signal to all of them.
 proc tkps::sendSignal {signal} {
-    variable confirm_signals 
+    variable confirm_signals
     set pids [selectedProcesses]
     set proceed 1
     if {$pids != {}} {
@@ -656,7 +656,7 @@ proc tkps::sendSignal {signal} {
         }
 
         if {$proceed} {
-            eval exec [format "kill -%s" $signal] $pids 
+            eval exec [format "kill -%s" $signal] $pids
         }
 
         updateUnixProcs
@@ -675,8 +675,8 @@ proc tkps::selectedProcesses {} {
 }
 
 
-# The loop running in the background. 
-# We want to make sure that we don't update if there is 
+# The loop running in the background.
+# We want to make sure that we don't update if there is
 # a current selection in the window.
 proc tkps::updateLoop {} {
     variable UPDATE_PERIOD
@@ -702,16 +702,16 @@ proc tkps::init {} {
     set systemRCFile "/etc/${tkps::application}rc"
     set userRCFile ""
     switch $::tcl_platform(platform) {
-	"unix" {
-	    if {[info exists ::env(DOTDIR)]} {
-		set userRCFile [file join $::env(DOTDIR) .${tkps::application}rc]
-	    } else {
-		set userRCFile [file join $::env(HOME) .${tkps::application}rc]
-	    }
-	}
-	default {
-	    error "System $::tcl_platform(platform) is not supported."
-	}
+        "unix" {
+            if {[info exists ::env(DOTDIR)]} {
+                set userRCFile [file join $::env(DOTDIR) .${tkps::application}rc]
+            } else {
+                set userRCFile [file join $::env(HOME) .${tkps::application}rc]
+            }
+        }
+        default {
+            error "System $::tcl_platform(platform) is not supported."
+        }
     }
 
     ################################################################
@@ -728,9 +728,8 @@ proc tkps::init {} {
 
     catch {option read $systemRCFile startupFile}
     catch {option read $userRCFile userDefault}
-
-
 }
+
 
 proc tkps::start {psArgs} {
     variable common_ps_keywords
@@ -819,7 +818,7 @@ proc tkps::start {psArgs} {
     ################################################################
     #
     # Create an entry field for restricting the visible entries.
-    # This simulates the "ps auxww | grep foo" idiom. 
+    # This simulates the "ps auxww | grep foo" idiom.
     #
 
     [w app] toolbar add label findlabel -text "Find:"
@@ -890,9 +889,9 @@ proc tkps::start {psArgs} {
     # Set up args to 'ps'.
     # We either got args from the command line, or we default
     # to auxww
-    
+
     if {[llength $psArgs] > 0} {
-        set ps_args [lindex $psArgs 0] 
+        set ps_args [lindex $psArgs 0]
     } else {
         set ps_args $DEFAULT_PS_ARGS
     }
