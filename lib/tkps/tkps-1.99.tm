@@ -1,12 +1,4 @@
-#!/usr/bin/tclsh
-#  \
-exec tclsh "$0" ${1+"$@"}
-# This script generates a process browser, which lists the running
-# processes (using unix "ps") and allows you to send signals (such as KILL)
-# using a popup menu. 
-
-# Create a scrollbar on the right side of the main window and a listbox
-# on the left side.
+# Rewritten in modern Tcl/Tk by Alexander Danilov (alexander.a.danilov@gmail.com)
 #
 # Adapted/enhanced for Linux by Ed Petron (epetron@leba.net)
 # Kidong Lee (kidong@shinbiro.com) May 1997
@@ -853,7 +845,7 @@ proc tkps::start {psArgs} {
     set sw [widget::scrolledwindow $mf.pstable]
 
     tablelist::tablelist [w pstable $sw.table]
-    puts pstable=[w pstable]
+
     $sw setwidget [w pstable]
     pack $sw -fill both -expand true
 
@@ -928,6 +920,3 @@ proc tkps::start {psArgs} {
 
     updateLoop
 }
-
-
-tkps::start $argv
