@@ -1,0 +1,16 @@
+#! /bin/sh
+# \
+exec tclsh "$0" ${1+"$@"}
+
+# apply used here to hide temporary variables
+apply {{} {
+    set app [file rootname [file tail [file normalize [info script]]]]
+    set prefix [file dirname [file dirname [file normalize [info script]]]]
+    set basename [file rootname $app]
+    
+    tcl::tm::path add [file join $prefix lib $basename]
+
+    uplevel #0 package require $app
+
+    uplevel #0 [list ${app}::start {*}$::argv]
+}}
