@@ -12,5 +12,5 @@ apply {{} {
 
     uplevel #0 package require $app
 
-    uplevel #0 [list ${app}::start $::argv]
+    uplevel #0 [list ${app}::start {*}$::argv]
 }}
