@@ -352,11 +352,11 @@ proc updateUnixProcs {} {
 #
 
 proc confirmDialog {signame pids} {
-    set dialog [widget::dialog [w tkps].sendSignalConfirm \
+    set dialog [widget::dialog [w app].sendSignalConfirm \
                     -modal local \
                     -separator 1 \
                     -type okcancel \
-                    -parent [w tkps] \
+                    -parent [w app] \
                     -padding 10 \
                     -title "Confirm KILL command" \
                    ]
@@ -376,10 +376,10 @@ proc confirmDialog {signame pids} {
    
 ################################################################
 proc msgDialog {msg} {
-    widget::dialog [w message [w tkps].message]\
+    widget::dialog [w message [w app].message]\
         -modal local \
         -title Help \
-        -parent [w tkps] \
+        -parent [w app] \
         -separator 1 \
         -type ok \
         -padding 10
@@ -449,9 +449,9 @@ proc changeUpdatePeriod {} {
     set update_time $UPDATE_PERIOD
     catch {destroy .update}
     # create top level window
-    widget::dialog [w change [w tkps].change] \
+    widget::dialog [w change [w app].change] \
         -title "Set update period" \
-        -parent [w tkps] \
+        -parent [w app] \
         -type okcancel \
         -separator 1 \
         -modal local \
@@ -488,8 +488,8 @@ proc changePsArgs {} {
     global ps_args args DEFAULT_PS_ARGS
     global prompt
 
-    widget::dialog [w args [w tkps].args] \
-        -parent [w tkps] \
+    widget::dialog [w args [w app].args] \
+        -parent [w app] \
         -modal local \
         -title "Set command line args" \
         -type okcancel \
@@ -741,7 +741,7 @@ proc main {psArgs} {
     variable DEFAULT_PS_ARGS
 
 
-    tkapp [w tkps .tkps] \
+    tkapp [w app .tkps] \
         -name [option get . title Title] \
         -application TkPS \
         -defaultmenu 1 \
@@ -752,7 +752,7 @@ proc main {psArgs} {
     #
 
     # menu bar widget
-    set m [[w tkps] getmenu]
+    set m [[w app] getmenu]
 
     $m insert 2 cascade -label Options -menu $m.options -underline 0
     $m insert 3 cascade -label "Signal" -menu $m.signals -underline 0
@@ -817,25 +817,25 @@ proc main {psArgs} {
     # This simulates the "ps auxww | grep foo" idiom. 
     #
 
-    [w tkps] toolbar add label findlabel -text "Find:"
-    [w tkps] toolbar add \
-        [entry [w findentry [[w tkps] gettoolbar].findentry] -textvariable findpat]
-    [w tkps] toolbar add label greplabel -text "Filter:"
-    [w tkps] toolbar add \
-        [entry [w filterentry [[w tkps] gettoolbar].filterentry] \
+    [w app] toolbar add label findlabel -text "Find:"
+    [w app] toolbar add \
+        [entry [w findentry [[w app] gettoolbar].findentry] -textvariable findpat]
+    [w app] toolbar add label greplabel -text "Filter:"
+    [w app] toolbar add \
+        [entry [w filterentry [[w app] gettoolbar].filterentry] \
              -textvariable greppat]
-    [w tkps] toolbar add \
-        [ttk::button [[w tkps] gettoolbar].update \
+    [w app] toolbar add \
+        [ttk::button [[w app] gettoolbar].update \
              -text "Update" \
              -command {getUnixProcs $greppat}]
 
     bind [w filterentry] <Return> updateUnixProcs
     bind [w findentry] <Return> {findUnixProc $findpat}
-    bind [w tkps] <Escape> hideProcessDescription
+    bind [w app] <Escape> hideProcessDescription
 
-    [w tkps] toolbar add space
+    [w app] toolbar add space
 
-    set mf [[w tkps] getframe]
+    set mf [[w app] getframe]
 
     set sw [widget::scrolledwindow [w pstable $mf.pstable]]
 
@@ -878,7 +878,7 @@ proc main {psArgs} {
 
     pack $process -side left -fill both -expand true
 
-    [w tkps] statusbar add label -- -textvariable currenttime
+    [w app] statusbar add label -- -textvariable currenttime
 
     ################################################################
     # Set up args to 'ps'.
@@ -908,7 +908,7 @@ proc main {psArgs} {
         set confirm_signals $oldconfirm
     }
 
-    bind [w tkps] <F1> showHelp
+    bind [w app] <F1> showHelp
 
     wm withdraw .
 
