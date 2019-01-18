@@ -375,7 +375,7 @@ proc tkps::confirmDialog {signame pids} {
     return [expr {$r eq "ok" ? 1 : 0}]
 }
 
-   
+
 ################################################################
 proc tkps::msgDialog {msg} {
     widget::dialog [w message [w app].message]\
@@ -758,7 +758,7 @@ proc tkps::start {psArgs} {
         -name [option get . title Title] \
         -application TkPS \
         -defaultmenu 1 \
-        -aboutcommand showAbout
+        -aboutcommand ${ns}::showAbout
 
     ################################################################
     # Define menu bar items
@@ -822,7 +822,7 @@ proc tkps::start {psArgs} {
     $m.signals add cascade -label "All Signals" -menu $m.signals.all_signals
     addItems $m.signals.posix_signals $posix_sigs
 
-    $m.help add command -label "Help" -command showHelp
+    $m.help add command -label "Help" -command ${ns}::showHelp
 
     ################################################################
     #
