@@ -33,244 +33,247 @@ package require lambda
 
 namespace import tkapp::w
 
-set application tkps
-set version 1.25
 
-set systemRCFile "/etc/${application}rc"
-set userRCFile ""
-switch $tcl_platform(platform) {
-    "unix" {
-        if {[info exists env(DOTDIR)]} {
-            set userRCFile [file join $env(DOTDIR) .${application}rc]
-        } else {
-            set userRCFile [file join $env(HOME) .${application}rc]
-        }
+namespace eval tkps {
+    variable application tkps
+    variable version 1.99
+    
+    variable common_sigs {
+        {INT         2        interupt}
+        {QUIT        3        quit}
+        {IOT         6        abort}
+        {KILL        9        non-catchable, non-ignorable kill}
+        {STOP        17       sendable stop signal not from tty}
+        {ALRM        14       alarm clock}
+        {TERM        15       software termination signal}
     }
-    default {
-        error "System $tcl_platform(platform) is not supported."
+
+    variable all_sigs {
+        {HUP         1         hangup}
+        {INT         2         interrupt}
+        {QUIT        3         quit}
+        {ILL         4         illegal instruction (not reset when caught)}
+        {TRAP        5         trace trap (not reset when caught)}
+        {ABRT        6         abort()}
+        {IOT         6         SIGABRT compatibility}
+        {EMT         7         EMT instruction}
+        {FPE         8         floating point exception}
+        {KILL        9         kill (cannot be caught or ignored)}
+        {BUS         10        bus error}
+        {SEGV        11        segmentation violation}
+        {SYS         12        bad argument to system call}
+        {PIPE        13        write on a pipe with no one to read it}
+        {ALRM        14        alarm clock}
+        {TERM        15        software termination signal from kill}
+        {URG         16        urgent condition on IO channel}
+        {STOP        17        sendable stop signal not from tty}
+        {TSTP        18        stop signal from tty}
+        {CONT        19        continue a stopped process}
+        {CHLD        20        to parent on child stop or exit}
+        {TTIN        21        to readers pgrp upon background tty read}
+        {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
+        {IO          23        input/output possible signal}
+        {XCPU        24        exceeded CPU time limit}
+        {XFSZ        25        exceeded file size limit}
+        {VTALRM      26        virtual time alarm}
+        {PROF        27        profiling time alarm}
+        {WINCH       28        window size changes}
+        {INFO        29        information request}
+        {USR1        30        user defined signal 1}
+        {USR2        31        user defined signal 2}
     }
+
+    variable posix_sigs {
+        {HUP         1         hangup}
+        {INT         2         interrupt}
+        {QUIT        3         quit}
+        {ILL         4         illegal instruction (not reset when caught)}
+        {ABRT        6         abort()}
+        {FPE         8         floating point exception}
+        {KILL        9         kill (cannot be caught or ignored)}
+        {SEGV        11        segmentation violation}
+        {PIPE        13        write on a pipe with no one to read it}
+        {ALRM        14        alarm clock}
+        {TERM        15        software termination signal from kill}
+        {STOP        17        sendable stop signal not from tty}
+        {TSTP        18        stop signal from tty}
+        {CONT        19        continue a stopped process}
+        {CHLD        20        to parent on child stop or exit}
+        {TTIN        21        to readers pgrp upon background tty read}
+        {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
+        {USR1        30        user defined signal 1}
+        {USR2        31        user defined signal 2}
+    }
+
+    variable common_ps_keywords {
+        {%cpu       percentage cpu usage (alias pcpu)}
+        {%mem       percentage memory usage (alias pmem)}
+        {uid        effective user ID}
+        {user       user name (from uid)}
+        {majflt     total page faults}
+        {minflt     total page reclaims}
+        {msgrcv     total messages received (reads from pipes/sockets)}
+        {msgsnd     total messages sent (writes on pipes/sockets)}
+        {vsz        virtual size in Kbytes (alias vsize)}
+        {nice       nice value (alias ni)}
+        {nsigs      total signals taken (alias nsignals)}
+        {nswap      total swaps in/out}
+        {pgid       process group number}
+        {pid        process ID}
+        {ppid       parent process ID}
+        {rgid       real group ID}
+        {ruid       real user ID}
+        {ruser      user name (from ruid)}
+        {start      time started}
+        {time       accumulated cpu time, user + system (alias cputime)}
+        {tpgid      control terminal process group ID}
+        {tsiz       text size (in Kbytes)}
+        {tty        full name of control terminal}
+        {lim        memoryuse limit}
+        {logname    login name of user who started the process}
+    }
+
+    variable ALL_ps_keywords {
+        {%cpu       percentage cpu usage (alias pcpu)}
+        {%mem       percentage memory usage (alias pmem)}
+        {acflag     accounting flag (alias acflg)}
+        {cpu        short-term cpu usage factor (for scheduling)}
+        {inblk      total blocks read (alias inblock)}
+        {jobc       job control count}
+        {ktrace     tracing flags}
+        {ktracep    tracing vnode}
+        {lim        memoryuse limit}
+        {lstart     time started}
+        {majflt     total page faults}
+        {minflt     total page reclaims}
+        {msgrcv     total messages received (reads from pipes/sockets)}
+        {msgsnd     total messages sent (writes on pipes/sockets)}
+        {nice       nice value (alias ni)}
+        {nivcsw     total involuntary context switches}
+        {nsigs      total signals taken (alias nsignals)}
+        {nswap      total swaps in/out}
+        {nvcsw      total voluntary context switches}
+        {nwchan     wait channel (as an address)}
+        {oublk      total blocks written (alias oublock)}
+        {p_ru       resource usage (valid only for zombie)}
+        {paddr      swap address}
+        {pagein     pageins (same as majflt)}
+        {pgid       process group number}
+        {pid        process ID}
+        {ppid       parent process ID}
+        {pri        scheduling priority}
+        {re         core residency time (in seconds; 127 = infinity)}
+        {rgid       real group ID}
+
+        {rlink      reverse link on run queue, or 0}
+        {rss        resident set size}
+        {rsz        resident set size + (text size / text use count) (alias rs- size)}
+        {ruid       real user ID}
+        {ruser      user name (from ruid)}
+        {sess       session pointer}
+        {sig        pending signals (alias pending)}
+        {sigcatch   caught signals (alias caught)}
+        {sigignore  ignored signals (alias ignored)}
+        {sigmask    blocked signals (alias blocked)}
+        {sl         sleep time (in seconds; 127 = infinity)}
+        {start      time started}
+        {svgid      saved gid from a setgid executable}
+        {svuid      saved uid from a setuid executable}
+        {tdev       control terminal device number}
+        {time       accumulated cpu time, user + system (alias cputime)}
+        {tpgid      control terminal process group ID}
+        {tsess      control terminal session pointer}
+        {tsiz       text size (in Kbytes)}
+        {tt         control terminal name (two letter abbreviation)}
+        {tty        full name of control terminal}
+        {ucomm      name to be used for accounting}
+        {uid        effective user ID}
+        {upr        scheduling priority on return from system call (alias usrpri)}
+        {user       user name (from uid)}
+        {vsz        virtual size in Kbytes (alias vsize)}
+        {wchan      wait channel (as a symbolic name)}
+        {xstat      exit or stop status (valid only for stopped or zombie process)}
+        {logname    login name of user who started the process}
+    }
+
+    variable PROCESS_FLAGS {
+        {SLOAD         0x0000001     in core}
+        {SSYS          0x0000002     swapper or pager process}
+        {SLOCK         0x0000004     process being swapped out}
+        {SSWAP         0x0000008     save area flag}
+        {STRC          0x0000010     process is being traced}
+        {SWTED         0x0000020     another tracing flag}
+        {SSINTR        0x0000040     sleep is interruptible}
+        {SPAGE         0x0000080     process in page wait state}
+        {SKEEP         0x0000100     another flag to prevent swap out}
+        {SOMASK        0x0000200     restore old mask after taking signal}
+        {SWEXIT        0x0000400     working on exiting}
+        {SPHYSIO       0x0000800     doing physical I/O}
+        {SVFORK        0x0001000     process resulted from vfork(2)}
+        {SVFDONE       0x0002000     another vfork flag}
+        {SNOVM         0x0004000     no vm, parent in a vfork}
+        {SPAGV         0x0008000     init data space on demand, from vnode}
+        {SSEQL         0x0010000     user warned of sequential vm behavior}
+        {SUANOM        0x0020000     user warned of random vm behavior}
+        {STIMO         0x0040000     timing out during sleep}
+        {SNOCLDSTOP    0x0080000     no SIGCHLD when children stop}
+        {SCTTY         0x0100000     has a controlling terminal}
+        {SOWEUPC       0x0200000     owe process an addupc() call at next}
+        {SSEL          0x0400000     selecting; wakeup/waiting danger}
+        {SEXEC         0x0800000     process called exec(2)}
+        {SHPUX         0x1000000     HP-UX process (HPUXCOMPAT)}
+        {SULOCK        0x2000000     locked in core after swap error}
+        {SPTECHG       0x4000000     pte's for process have changed}
+    }
+
+    variable state_fields {
+        {D Process in disk (or other short term, uninterruptable) wait.}
+        {I Process that is idle (sleeping for longer than about 20 seconds).}
+        {P Process in page wait.}
+        {R Process is Runnable.}
+        {S Process is sleeping for less than about 20 seconds.}
+        {T Process is stopped.}
+        {Z Process is dead (a ``zombie'').}
+        {+ Process is in the foreground process group of its control terminal.}
+        {< Process has raised CPU scheduling priority.}
+        {> Process has specified a soft limit on memory requirements and is currently exceeding that limit; such a pro cess is (necessarily) not swapped.}
+        {A  Process has asked for random page replacement (VA_ANOM, from vadvise(2),  for example, lisp(1) in a garbage collect).}
+        {E The process is trying to exit.}
+        {L The process has pages locked in core (for example, for raw I/O).}
+        {N The process has reduced CPU scheduling priority (see setpriority(2)).}
+        {S The process has asked for FIFO page replacement (VA_SEQL, from vadvise(2),  for example, a large image processing program using virtual memory to sequentially address voluminous data).}
+        {s The process is a session leader.}
+        {V The process is suspended during a vfork.}
+        {W The process is swapped out.}
+        {X The process is being traced or debugged.}
+    }
+
+    # defaults
+    variable confirm_signals 1
+    variable list_which_signals $common_ps_keywords
+
+    variable sortoption ""
+
+    # The default update time of display is 10 seconds
+    # You can change it in the configure menu.
+    variable MIN_UPDATE_PERIOD 2000
+    variable UPDATE_PERIOD 10000 
+
+    # The default double click behavior
+    variable USER_SIG KILL
+
+    # The default command line args to "ps"
+    variable DEFAULT_PS_ARGS  "auxww"
+
+    variable pid_column 0
 }
 
-
-set common_sigs {
-    {INT         2        interupt}
-    {QUIT        3        quit}
-    {IOT         6        abort}
-    {KILL        9        non-catchable, non-ignorable kill}
-    {STOP        17       sendable stop signal not from tty}
-    {ALRM        14       alarm clock}
-    {TERM        15       software termination signal}
-}
-
-set all_sigs {
-    {HUP         1         hangup}
-    {INT         2         interrupt}
-    {QUIT        3         quit}
-    {ILL         4         illegal instruction (not reset when caught)}
-    {TRAP        5         trace trap (not reset when caught)}
-    {ABRT        6         abort()}
-    {IOT         6         SIGABRT compatibility}
-    {EMT         7         EMT instruction}
-    {FPE         8         floating point exception}
-    {KILL        9         kill (cannot be caught or ignored)}
-    {BUS         10        bus error}
-    {SEGV        11        segmentation violation}
-    {SYS         12        bad argument to system call}
-    {PIPE        13        write on a pipe with no one to read it}
-    {ALRM        14        alarm clock}
-    {TERM        15        software termination signal from kill}
-    {URG         16        urgent condition on IO channel}
-    {STOP        17        sendable stop signal not from tty}
-    {TSTP        18        stop signal from tty}
-    {CONT        19        continue a stopped process}
-    {CHLD        20        to parent on child stop or exit}
-    {TTIN        21        to readers pgrp upon background tty read}
-    {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
-    {IO          23        input/output possible signal}
-    {XCPU        24        exceeded CPU time limit}
-    {XFSZ        25        exceeded file size limit}
-    {VTALRM      26        virtual time alarm}
-    {PROF        27        profiling time alarm}
-    {WINCH       28        window size changes}
-    {INFO        29        information request}
-    {USR1        30        user defined signal 1}
-    {USR2        31        user defined signal 2}
-}
-
-set posix_sigs {
-    {HUP         1         hangup}
-    {INT         2         interrupt}
-    {QUIT        3         quit}
-    {ILL         4         illegal instruction (not reset when caught)}
-    {ABRT        6         abort()}
-    {FPE         8         floating point exception}
-    {KILL        9         kill (cannot be caught or ignored)}
-    {SEGV        11        segmentation violation}
-    {PIPE        13        write on a pipe with no one to read it}
-    {ALRM        14        alarm clock}
-    {TERM        15        software termination signal from kill}
-    {STOP        17        sendable stop signal not from tty}
-    {TSTP        18        stop signal from tty}
-    {CONT        19        continue a stopped process}
-    {CHLD        20        to parent on child stop or exit}
-    {TTIN        21        to readers pgrp upon background tty read}
-    {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
-    {USR1        30        user defined signal 1}
-    {USR2        31        user defined signal 2}
-}
-
-set common_ps_keywords {
-    {%cpu       percentage cpu usage (alias pcpu)}
-    {%mem       percentage memory usage (alias pmem)}
-    {uid        effective user ID}
-    {user       user name (from uid)}
-    {majflt     total page faults}
-    {minflt     total page reclaims}
-    {msgrcv     total messages received (reads from pipes/sockets)}
-    {msgsnd     total messages sent (writes on pipes/sockets)}
-    {vsz        virtual size in Kbytes (alias vsize)}
-    {nice       nice value (alias ni)}
-    {nsigs      total signals taken (alias nsignals)}
-    {nswap      total swaps in/out}
-    {pgid       process group number}
-    {pid        process ID}
-    {ppid       parent process ID}
-    {rgid       real group ID}
-    {ruid       real user ID}
-    {ruser      user name (from ruid)}
-    {start      time started}
-    {time       accumulated cpu time, user + system (alias cputime)}
-    {tpgid      control terminal process group ID}
-    {tsiz       text size (in Kbytes)}
-    {tty        full name of control terminal}
-    {lim        memoryuse limit}
-    {logname    login name of user who started the process}
-}
-
-set ALL_ps_keywords {
-    {%cpu       percentage cpu usage (alias pcpu)}
-    {%mem       percentage memory usage (alias pmem)}
-    {acflag     accounting flag (alias acflg)}
-    {cpu        short-term cpu usage factor (for scheduling)}
-    {inblk      total blocks read (alias inblock)}
-    {jobc       job control count}
-    {ktrace     tracing flags}
-    {ktracep    tracing vnode}
-    {lim        memoryuse limit}
-    {lstart     time started}
-    {majflt     total page faults}
-    {minflt     total page reclaims}
-    {msgrcv     total messages received (reads from pipes/sockets)}
-    {msgsnd     total messages sent (writes on pipes/sockets)}
-    {nice       nice value (alias ni)}
-    {nivcsw     total involuntary context switches}
-    {nsigs      total signals taken (alias nsignals)}
-    {nswap      total swaps in/out}
-    {nvcsw      total voluntary context switches}
-    {nwchan     wait channel (as an address)}
-    {oublk      total blocks written (alias oublock)}
-    {p_ru       resource usage (valid only for zombie)}
-    {paddr      swap address}
-    {pagein     pageins (same as majflt)}
-    {pgid       process group number}
-    {pid        process ID}
-    {ppid       parent process ID}
-    {pri        scheduling priority}
-    {re         core residency time (in seconds; 127 = infinity)}
-    {rgid       real group ID}
-
-    {rlink      reverse link on run queue, or 0}
-    {rss        resident set size}
-    {rsz        resident set size + (text size / text use count) (alias rs- size)}
-    {ruid       real user ID}
-    {ruser      user name (from ruid)}
-    {sess       session pointer}
-    {sig        pending signals (alias pending)}
-    {sigcatch   caught signals (alias caught)}
-    {sigignore  ignored signals (alias ignored)}
-    {sigmask    blocked signals (alias blocked)}
-    {sl         sleep time (in seconds; 127 = infinity)}
-    {start      time started}
-    {svgid      saved gid from a setgid executable}
-    {svuid      saved uid from a setuid executable}
-    {tdev       control terminal device number}
-    {time       accumulated cpu time, user + system (alias cputime)}
-    {tpgid      control terminal process group ID}
-    {tsess      control terminal session pointer}
-    {tsiz       text size (in Kbytes)}
-    {tt         control terminal name (two letter abbreviation)}
-    {tty        full name of control terminal}
-    {ucomm      name to be used for accounting}
-    {uid        effective user ID}
-    {upr        scheduling priority on return from system call (alias usrpri)}
-    {user       user name (from uid)}
-    {vsz        virtual size in Kbytes (alias vsize)}
-    {wchan      wait channel (as a symbolic name)}
-    {xstat      exit or stop status (valid only for stopped or zombie process)}
-    {logname    login name of user who started the process}
-}
-
-set PROCESS_FLAGS {
-    {SLOAD         0x0000001     in core}
-    {SSYS          0x0000002     swapper or pager process}
-    {SLOCK         0x0000004     process being swapped out}
-    {SSWAP         0x0000008     save area flag}
-    {STRC          0x0000010     process is being traced}
-    {SWTED         0x0000020     another tracing flag}
-    {SSINTR        0x0000040     sleep is interruptible}
-    {SPAGE         0x0000080     process in page wait state}
-    {SKEEP         0x0000100     another flag to prevent swap out}
-    {SOMASK        0x0000200     restore old mask after taking signal}
-    {SWEXIT        0x0000400     working on exiting}
-    {SPHYSIO       0x0000800     doing physical I/O}
-    {SVFORK        0x0001000     process resulted from vfork(2)}
-    {SVFDONE       0x0002000     another vfork flag}
-    {SNOVM         0x0004000     no vm, parent in a vfork}
-    {SPAGV         0x0008000     init data space on demand, from vnode}
-    {SSEQL         0x0010000     user warned of sequential vm behavior}
-    {SUANOM        0x0020000     user warned of random vm behavior}
-    {STIMO         0x0040000     timing out during sleep}
-    {SNOCLDSTOP    0x0080000     no SIGCHLD when children stop}
-    {SCTTY         0x0100000     has a controlling terminal}
-    {SOWEUPC       0x0200000     owe process an addupc() call at next}
-    {SSEL          0x0400000     selecting; wakeup/waiting danger}
-    {SEXEC         0x0800000     process called exec(2)}
-    {SHPUX         0x1000000     HP-UX process (HPUXCOMPAT)}
-    {SULOCK        0x2000000     locked in core after swap error}
-    {SPTECHG       0x4000000     pte's for process have changed}
-}
-
-set state_fields {
-    {D Process in disk (or other short term, uninterruptable) wait.}
-    {I Process that is idle (sleeping for longer than about 20 seconds).}
-    {P Process in page wait.}
-    {R Process is Runnable.}
-    {S Process is sleeping for less than about 20 seconds.}
-    {T Process is stopped.}
-    {Z Process is dead (a ``zombie'').}
-    {+ Process is in the foreground process group of its control terminal.}
-    {< Process has raised CPU scheduling priority.}
-    {> Process has specified a soft limit on memory requirements and is currently exceeding that limit; such a pro cess is (necessarily) not swapped.}
-    {A  Process has asked for random page replacement (VA_ANOM, from vadvise(2),  for example, lisp(1) in a garbage collect).}
-    {E The process is trying to exit.}
-    {L The process has pages locked in core (for example, for raw I/O).}
-    {N The process has reduced CPU scheduling priority (see setpriority(2)).}
-    {S The process has asked for FIFO page replacement (VA_SEQL, from vadvise(2),  for example, a large image processing program using virtual memory to sequentially address voluminous data).}
-    {s The process is a session leader.}
-    {V The process is suspended during a vfork.}
-    {W The process is swapped out.}
-    {X The process is being traced or debugged.}
-}
-
-# defaults
-set confirm_signals 1
-set list_which_signals $common_ps_keywords
 
 ################################################################
 
 
 # add one menu entry for each signal 
-proc addItems {menu items} {
+proc tkps::addItems {menu items} {
     foreach entry $items {
         set signame [lindex $entry 0]
         $menu add command -label $entry -command [list sendSignal $signame]
@@ -279,7 +282,7 @@ proc addItems {menu items} {
 
 
 # split string into specified number of parts into list
-proc stringToList {str parts} {
+proc tkps::stringToList {str parts} {
     set r [list]
     for {set i 0} {$i <= $parts-2} {incr i} {
         lappend r [lindex $str $i]
@@ -290,13 +293,14 @@ proc stringToList {str parts} {
 
 # This runs ps and gets the results into a list of entries.
 # FILTER is a variable used to filter the results, a la grep.  
-proc getUnixProcs {filter} {
-    global ps_args
-    global sortoption
+proc tkps::getUnixProcs {} {
+    variable ps_args
+    variable sortoption
+    variable greppat
 
     # The PID column is the column which has the pid numbers in it. 
     # This can change depending on the options passed to 'ps'.
-    global pid_column
+    variable pid_column
 
     # save the old list scroll value 
     set oldyview [[w pstable] nearest 0]
@@ -324,7 +328,7 @@ proc getUnixProcs {filter} {
     [w pstable] delete 0 end
     # Fill in listbox with process entries from 'ps' command output.
     while { [set i [gets $unix_procs_fd]] != {}  }  {
-        if [regexp $filter $i] {
+        if [regexp $greppat $i] {
             [w pstable] insert end [stringToList $i [llength $ps_columns]]
         }
     }
@@ -338,10 +342,8 @@ proc getUnixProcs {filter} {
     focus [w pstable]
 }
 
-proc updateUnixProcs {} {
-    variable greppat
-
-    getUnixProcs $greppat
+proc tkps::updateUnixProcs {} {
+    getUnixProcs
 }
 
 ################################################################
@@ -351,7 +353,7 @@ proc updateUnixProcs {} {
 # Returns 1 if proceed, 0 if cancel
 #
 
-proc confirmDialog {signame pids} {
+proc tkps::confirmDialog {signame pids} {
     set dialog [widget::dialog [w app].sendSignalConfirm \
                     -modal local \
                     -separator 1 \
@@ -375,7 +377,7 @@ proc confirmDialog {signame pids} {
 
    
 ################################################################
-proc msgDialog {msg} {
+proc tkps::msgDialog {msg} {
     widget::dialog [w message [w app].message]\
         -modal local \
         -title Help \
@@ -394,7 +396,7 @@ proc msgDialog {msg} {
 }
 
 
-proc showHelp {} {
+proc tkps::showHelp {} {
     msgDialog {This program will send a signal to the selected process. There \
 are several equivalent ways to choose a signal to send. \
 
@@ -424,7 +426,9 @@ The Options menu contains some configuration settings.
 
 }
 
-proc showAbout {} {
+proc tkps::showAbout {} {
+    variable version
+
     msgDialog [format {
 The tkps browser was written by 
 Ed Petron (epetron@leba.net)
@@ -435,19 +439,19 @@ Originally written by Henry Minsky (hqm@ai.mit.edu)
 This is Version %s, August 2001
 
 Terms of the GNU Public License apply.
-} $::version]
+} $version]
 }
 
 
 ################################################################
 # This ought to be a generic program to change a variable's value
-proc changeUpdatePeriod {} {
-    global UPDATE_PERIOD MIN_UPDATE_PERIOD update_time
-    global prompt
+proc tkps::changeUpdatePeriod {} {
+    variable UPDATE_PERIOD MIN_UPDATE_PERIOD update_time
+    variable prompt
 
     set prev_update_time $UPDATE_PERIOD
     set update_time $UPDATE_PERIOD
-    catch {destroy .update}
+
     # create top level window
     widget::dialog [w change [w app].change] \
         -title "Set update period" \
@@ -484,9 +488,9 @@ proc changeUpdatePeriod {} {
 ################################################################
 # Dialog to change args to ps. This should call a dialog subroutine.
 #
-proc changePsArgs {} {
-    global ps_args args DEFAULT_PS_ARGS
-    global prompt
+proc tkps::changePsArgs {} {
+    variable ps_args args DEFAULT_PS_ARGS
+    variable prompt
 
     widget::dialog [w args [w app].args] \
         -parent [w app] \
@@ -529,7 +533,7 @@ proc changePsArgs {} {
 # separator - between columns
 # rowPrefix - string before first column
 # rowSuffix - string after last column
-proc tableToText {table aligns {separator " "} {rowPrefix ""} {rowSuffix ""}} {
+proc tkps::tableToText {table aligns {separator " "} {rowPrefix ""} {rowSuffix ""}} {
     set row2lengths [lambda {row} {lmap val $row {string length $val}}]
     set selectMax [lambda {l1 l2} {lmap a $l1 b $l2 {expr {max($a, $b)}}}]
     set sizes [{*}$row2lengths [lindex $table 0]]
@@ -563,7 +567,7 @@ proc tableToText {table aligns {separator " "} {rowPrefix ""} {rowSuffix ""}} {
 # Routines to display a popup text widget with detailed info on a process
 
 
-proc fillInfoWindow {widget pid} {
+proc tkps::fillInfoWindow {widget pid} {
     set family TkFixedFont
     $widget configure -font $family
     
@@ -614,7 +618,7 @@ proc fillInfoWindow {widget pid} {
             foreach child [fileutil::cat [file join /proc $pid task $task children]] {
                 $widget tag bind child-$child <Any-Enter> "$widget tag configure child-$child -foreground red"
                 $widget tag bind child-$child <Any-Leave> "$widget tag configure child-$child -foreground blue"
-                $widget tag bind child-$child <1> [list fillInfoWindow $widget $child]
+                $widget tag bind child-$child <1> [list [namespace current]::fillInfoWindow $widget $child]
 
                 $widget insert end $child [list child child-$child] " "
             }
@@ -631,39 +635,11 @@ proc fillInfoWindow {widget pid} {
 
 
 ################################################################
-# Default settings
-
-option add *Menubutton.font fixed startupFile
-option add *Menu.font fixed startupFile
-option add *Button.font fixed startupFile
-option add *list.font fixed
-option add *header.font fixed
-option add *process.text.font fixed startupFile
-
-option add [string totitle $application].title "tkps - Process Manager" startupFile
-
-catch {option read $systemRCFile startupFile}
-catch {option read $userRCFile userDefault}
-
-set sortoption ""
-
-# The default update time of display is 10 seconds
-# You can change it in the configure menu.
-set MIN_UPDATE_PERIOD 2000
-set UPDATE_PERIOD 10000 
-
-# The default double click behavior
-set USER_SIG KILL
-
-# The default command line args to "ps"
-set DEFAULT_PS_ARGS  "auxww"
-
-################################################################
 # Finds first entry matching $findpat 
 #
 # Also scrolls the display to make the item visible if it is not already.
 
-proc findUnixProc {findpat} {
+proc tkps::findUnixProc {findpat} {
     set entries [[w pstable] size]
     for {set i 0} {$i < $entries} {incr i} {
         if [regexp $findpat [[w pstable] get $i]] {
@@ -678,8 +654,8 @@ proc findUnixProc {findpat} {
 
 # Send signal looks at the currently selected entries in the listbox
 # and sends the signal to all of them.
-proc sendSignal {signal} {
-    global confirm_signals 
+proc tkps::sendSignal {signal} {
+    variable confirm_signals 
     set pids [selectedProcesses]
     set proceed 1
     if {$pids != {}} {
@@ -698,8 +674,8 @@ proc sendSignal {signal} {
 
 # get the selected entries from the listbox and extract
 # the pid fields from each selection
-proc selectedProcesses {} {
-    global pid_column
+proc tkps::selectedProcesses {} {
+    variable pid_column
 
     lmap i [[w pstable] curselection] {
         lindex [[w pstable] get $i] $pid_column
@@ -710,28 +686,61 @@ proc selectedProcesses {} {
 # The loop running in the background. 
 # We want to make sure that we don't update if there is 
 # a current selection in the window.
-proc updateLoop {} {
+proc tkps::updateLoop {} {
     variable UPDATE_PERIOD
 
     if {[[w pstable] curselection] == {}} {
         updateUnixProcs
     }
-    set ::currenttime [clock format [clock seconds]]
-    after $UPDATE_PERIOD updateLoop
+    variable currenttime [clock format [clock seconds]]
+    after $UPDATE_PERIOD [namespace current]::updateLoop
 }
 
 
-proc showProcessDescription {pid} {
+proc tkps::showProcessDescription {pid} {
     pack [w description] -side bottom -fill both
     fillInfoWindow [w description].process.text $pid
 }
 
-proc hideProcessDescription {} {
+proc tkps::hideProcessDescription {} {
     pack forget [w description]
 }
 
+proc tkps::init {} {
+    set systemRCFile "/etc/${tkps::application}rc"
+    set userRCFile ""
+    switch $::tcl_platform(platform) {
+	"unix" {
+	    if {[info exists ::env(DOTDIR)]} {
+		set userRCFile [file join $::env(DOTDIR) .${tkps::application}rc]
+	    } else {
+		set userRCFile [file join $::env(HOME) .${tkps::application}rc]
+	    }
+	}
+	default {
+	    error "System $::tcl_platform(platform) is not supported."
+	}
+    }
 
-proc main {psArgs} {
+    ################################################################
+    # Default settings
+
+    option add *Menubutton.font fixed startupFile
+    option add *Menu.font fixed startupFile
+    option add *Button.font fixed startupFile
+    option add *list.font fixed
+    option add *header.font fixed
+    option add *process.text.font fixed startupFile
+
+    option add [string totitle $tkps::application].title "tkps - Process Manager" startupFile
+
+    catch {option read $systemRCFile startupFile}
+    catch {option read $userRCFile userDefault}
+
+
+}
+
+proc tkps::start {psArgs} {
     variable common_ps_keywords
     variable ALL_ps_keywords
     variable common_sigs
@@ -739,7 +748,11 @@ proc main {psArgs} {
     variable posix_sigs
     variable ps_args
     variable DEFAULT_PS_ARGS
+    variable pid_column
 
+    init
+
+    set ns [namespace current]
 
     tkapp [w app .tkps] \
         -name [option get . title Title] \
@@ -823,11 +836,11 @@ proc main {psArgs} {
     [w app] toolbar add label greplabel -text "Filter:"
     [w app] toolbar add \
         [entry [w filterentry [[w app] gettoolbar].filterentry] \
-             -textvariable greppat]
+             -textvariable ${ns}::greppat]
     [w app] toolbar add \
         [ttk::button [[w app] gettoolbar].update \
              -text "Update" \
-             -command {getUnixProcs $greppat}]
+             -command getUnixProcs]
 
     bind [w filterentry] <Return> updateUnixProcs
     bind [w findentry] <Return> {findUnixProc $findpat}
@@ -878,7 +891,7 @@ proc main {psArgs} {
 
     pack $process -side left -fill both -expand true
 
-    [w app] statusbar add label -- -textvariable currenttime
+    [w app] statusbar add label -- -textvariable [namespace current]::currenttime
 
     ################################################################
     # Set up args to 'ps'.
@@ -894,19 +907,19 @@ proc main {psArgs} {
     # Set up bindings for the browser.
 
     bind [w pstable]  <Button-1> {focus [w pstable]}
-    bind [[w pstable] bodytag] <Double-Button-1> {
+    bind [[w pstable] bodytag] <Double-Button-1> [list namespace eval $ns {
         set oldconfirm $confirm_signals
         set confirm_signals 1
 
-        showProcessDescription [lindex [[w pstable] get [lindex [[w pstable] curselection] 0]] $::pid_column]
+        showProcessDescription [lindex [[w pstable] get [lindex [[w pstable] curselection] 0]] $pid_column]
         set confirm_signals $oldconfirm
-    }
-    bind [[w pstable] bodytag] <Return> {
+    }]
+    bind [[w pstable] bodytag] <Return> [list namespace eval $ns {
         set oldconfirm $confirm_signals
         set confirm_signals 1
-        showProcessDescription [lindex [[w pstable] get [lindex [[w pstable] curselection] 0]] $::pid_column]
+        showProcessDescription [lindex [[w pstable] get [lindex [[w pstable] curselection] 0]] $pid_column]
         set confirm_signals $oldconfirm
-    }
+    }]
 
     bind [w app] <F1> showHelp
 
@@ -916,4 +929,4 @@ proc main {psArgs} {
 }
 
 
-main $argv
+tkps::start $argv
