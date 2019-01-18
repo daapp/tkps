@@ -1,4 +1,0 @@
-#!/bin/sh
-
-head -3 /proc/$1/status  
-
