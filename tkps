@@ -465,7 +465,7 @@ proc tkps::changeUpdatePeriod {} {
 
     ttk::label $f.updateLabel -text "Update period (ms):"
     ttk::entry [w update_period $f.update] -justify right \
-        -textvariable update_time
+        -textvariable [namespace current]::update_time
 
     pack $f.updateLabel -side left
     pack [w update_period] -side right
@@ -506,7 +506,7 @@ proc tkps::changePsArgs {} {
     set f [[w args] getframe]
         
     ttk::label $f.argsLabel -text {Command line args for "ps": }
-    ttk::entry $f.args -textvariable args
+    ttk::entry $f.args -textvariable [namespace current]::args
     
     pack $f.argsLabel -side left
     pack $f.args -side right
@@ -787,15 +787,15 @@ proc tkps::start {psArgs} {
 
     $m.options add checkbutton \
         -label "Confirm Signals" \
-        -variable confirm_signals
+        -variable ${ns}::confirm_signals
     $m.options add separator
     $m.options add radiobutton \
         -label "List Common Process Info" \
-        -variable list_which_signals \
+        -variable ${ns}::list_which_signals \
         -value $common_ps_keywords
     $m.options add radiobutton \
         -label "List ALL Process Info" \
-        -variable list_which_signals \
+        -variable ${ns}::list_which_signals \
         -value $ALL_ps_keywords
     $m.options add cascade \
         -label "Sort Processes by..." \
@@ -832,7 +832,7 @@ proc tkps::start {psArgs} {
 
     [w app] toolbar add label findlabel -text "Find:"
     [w app] toolbar add \
-        [entry [w findentry [[w app] gettoolbar].findentry] -textvariable findpat]
+        [entry [w findentry [[w app] gettoolbar].findentry] -textvariable ${ns}::findpat]
     [w app] toolbar add label greplabel -text "Filter:"
     [w app] toolbar add \
         [entry [w filterentry [[w app] gettoolbar].filterentry] \
@@ -842,17 +842,18 @@ proc tkps::start {psArgs} {
              -text "Update" \
              -command getUnixProcs]
 
-    bind [w filterentry] <Return> updateUnixProcs
-    bind [w findentry] <Return> {findUnixProc $findpat}
-    bind [w app] <Escape> hideProcessDescription
+    bind [w filterentry] <Return> ${ns}::updateUnixProcs
+    bind [w findentry] <Return> [list namespace eval $ns {findUnixProc $findpat}]
+    bind [w app] <Escape> ${ns}::hideProcessDescription
 
     [w app] toolbar add space
 
     set mf [[w app] getframe]
 
-    set sw [widget::scrolledwindow [w pstable $mf.pstable]]
+    set sw [widget::scrolledwindow $mf.pstable]
 
     tablelist::tablelist [w pstable $sw.table]
+    puts pstable=[w pstable]
     $sw setwidget [w pstable]
     pack $sw -fill both -expand true
 
@@ -921,7 +922,7 @@ proc tkps::start {psArgs} {
         set confirm_signals $oldconfirm
     }]
 
-    bind [w app] <F1> showHelp
+    bind [w app] <F1> ${ns}::showHelp
 
     wm withdraw .
 
