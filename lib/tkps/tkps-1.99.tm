@@ -27,74 +27,88 @@ namespace import tkapp::w
 
 
 namespace eval tkps {
-    variable application tkps
-    variable version 1.99
-
-    variable common_sigs {
-        {INT         2        interupt}
-        {QUIT        3        quit}
-        {IOT         6        abort}
-        {KILL        9        non-catchable, non-ignorable kill}
-        {STOP        17       sendable stop signal not from tty}
-        {ALRM        14       alarm clock}
-        {TERM        15       software termination signal}
+    proc constant {name value} {
+        uplevel [list trace variable $name rw [list ::apply {{val name1 name2 opts} {
+            upvar $name1 var
+            if {$opts eq "w"} {
+                return -code error "\"$val\" is read only "
+            } else {
+                set var $val
+            }
+        }} $value]]
     }
 
-    variable all_sigs {
-        {HUP         1         hangup}
-        {INT         2         interrupt}
-        {QUIT        3         quit}
-        {ILL         4         illegal instruction (not reset when caught)}
-        {TRAP        5         trace trap (not reset when caught)}
-        {ABRT        6         abort()}
-        {IOT         6         SIGABRT compatibility}
-        {EMT         7         EMT instruction}
-        {FPE         8         floating point exception}
-        {KILL        9         kill (cannot be caught or ignored)}
-        {BUS         10        bus error}
-        {SEGV        11        segmentation violation}
-        {SYS         12        bad argument to system call}
-        {PIPE        13        write on a pipe with no one to read it}
-        {ALRM        14        alarm clock}
-        {TERM        15        software termination signal from kill}
-        {URG         16        urgent condition on IO channel}
-        {STOP        17        sendable stop signal not from tty}
-        {TSTP        18        stop signal from tty}
-        {CONT        19        continue a stopped process}
-        {CHLD        20        to parent on child stop or exit}
-        {TTIN        21        to readers pgrp upon background tty read}
-        {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
-        {IO          23        input/output possible signal}
-        {XCPU        24        exceeded CPU time limit}
-        {XFSZ        25        exceeded file size limit}
-        {VTALRM      26        virtual time alarm}
-        {PROF        27        profiling time alarm}
-        {WINCH       28        window size changes}
-        {INFO        29        information request}
-        {USR1        30        user defined signal 1}
-        {USR2        31        user defined signal 2}
-    }
+    constant APPLICATION tkps
+    constant VERSION 1.99
 
-    variable posix_sigs {
-        {HUP         1         hangup}
-        {INT         2         interrupt}
-        {QUIT        3         quit}
-        {ILL         4         illegal instruction (not reset when caught)}
-        {ABRT        6         abort()}
-        {FPE         8         floating point exception}
-        {KILL        9         kill (cannot be caught or ignored)}
-        {SEGV        11        segmentation violation}
-        {PIPE        13        write on a pipe with no one to read it}
-        {ALRM        14        alarm clock}
-        {TERM        15        software termination signal from kill}
-        {STOP        17        sendable stop signal not from tty}
-        {TSTP        18        stop signal from tty}
-        {CONT        19        continue a stopped process}
-        {CHLD        20        to parent on child stop or exit}
-        {TTIN        21        to readers pgrp upon background tty read}
-        {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
-        {USR1        30        user defined signal 1}
-        {USR2        31        user defined signal 2}
+    variable SIGNALS
+    array set SIGNALS {
+        COMMON {
+            {INT         2        interupt}
+            {QUIT        3        quit}
+            {IOT         6        abort}
+            {KILL        9        non-catchable, non-ignorable kill}
+            {STOP        17       sendable stop signal not from tty}
+            {ALRM        14       alarm clock}
+            {TERM        15       software termination signal}
+        }
+
+        ALL {
+            {HUP         1         hangup}
+            {INT         2         interrupt}
+            {QUIT        3         quit}
+            {ILL         4         illegal instruction (not reset when caught)}
+            {TRAP        5         trace trap (not reset when caught)}
+            {ABRT        6         abort()}
+            {IOT         6         SIGABRT compatibility}
+            {EMT         7         EMT instruction}
+            {FPE         8         floating point exception}
+            {KILL        9         kill (cannot be caught or ignored)}
+            {BUS         10        bus error}
+            {SEGV        11        segmentation violation}
+            {SYS         12        bad argument to system call}
+            {PIPE        13        write on a pipe with no one to read it}
+            {ALRM        14        alarm clock}
+            {TERM        15        software termination signal from kill}
+            {URG         16        urgent condition on IO channel}
+            {STOP        17        sendable stop signal not from tty}
+            {TSTP        18        stop signal from tty}
+            {CONT        19        continue a stopped process}
+            {CHLD        20        to parent on child stop or exit}
+            {TTIN        21        to readers pgrp upon background tty read}
+            {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
+            {IO          23        input/output possible signal}
+            {XCPU        24        exceeded CPU time limit}
+            {XFSZ        25        exceeded file size limit}
+            {VTALRM      26        virtual time alarm}
+            {PROF        27        profiling time alarm}
+            {WINCH       28        window size changes}
+            {INFO        29        information request}
+            {USR1        30        user defined signal 1}
+            {USR2        31        user defined signal 2}
+        }
+
+        POSIX {
+            {HUP         1         hangup}
+            {INT         2         interrupt}
+            {QUIT        3         quit}
+            {ILL         4         illegal instruction (not reset when caught)}
+            {ABRT        6         abort()}
+            {FPE         8         floating point exception}
+            {KILL        9         kill (cannot be caught or ignored)}
+            {SEGV        11        segmentation violation}
+            {PIPE        13        write on a pipe with no one to read it}
+            {ALRM        14        alarm clock}
+            {TERM        15        software termination signal from kill}
+            {STOP        17        sendable stop signal not from tty}
+            {TSTP        18        stop signal from tty}
+            {CONT        19        continue a stopped process}
+            {CHLD        20        to parent on child stop or exit}
+            {TTIN        21        to readers pgrp upon background tty read}
+            {TTOU        22        like TTIN for output if (tp->t_local&LTOSTOP)}
+            {USR1        30        user defined signal 1}
+            {USR2        31        user defined signal 2}
+        }
     }
 
     variable common_ps_keywords {
@@ -244,18 +258,15 @@ namespace eval tkps {
     variable confirm_signals 1
     variable list_which_signals $common_ps_keywords
 
-    variable sortoption ""
+    variable sortOption ""
 
     # The default update time of display is 10 seconds
     # You can change it in the configure menu.
-    variable MIN_UPDATE_PERIOD 2000
-    variable UPDATE_PERIOD 10000
-
-    # The default double click behavior
-    variable USER_SIG KILL
+    constant MIN_UPDATE_PERIOD 2000
+    variable updatePeriod 10000
 
     # The default command line args to "ps"
-    variable DEFAULT_PS_ARGS  "auxww"
+    constant DEFAULT_PS_ARGS  "auxww"
 
     variable pid_column 0
 }
@@ -287,7 +298,7 @@ proc tkps::stringToList {str parts} {
 # FILTER is a variable used to filter the results, a la grep.
 proc tkps::getUnixProcs {} {
     variable ps_args
-    variable sortoption
+    variable sortOption
     variable greppat
 
     # The PID column is the column which has the pid numbers in it.
@@ -299,7 +310,7 @@ proc tkps::getUnixProcs {} {
     set oldsize [[w pstable] size]
 
     # Open a pipe to the "ps" program, with some args.
-    set unix_procs_fd  [open "|ps $ps_args $sortoption"]
+    set unix_procs_fd  [open "|ps $ps_args $sortOption"]
 
     # Get the column headers, from the first line of output from ps.
     set header [gets $unix_procs_fd]
@@ -364,7 +375,7 @@ proc tkps::confirmDialog {signame pids} {
     set r [$dialog display]
     destroy $dialog
 
-    return [expr {$r eq "ok" ? 1 : 0}]
+    return [expr {$r eq "ok"}]
 }
 
 
@@ -419,8 +430,6 @@ The Options menu contains some configuration settings.
 }
 
 proc tkps::showAbout {} {
-    variable version
-
     msgDialog [format {
 The tkps browser was written by
 Ed Petron (epetron@leba.net)
@@ -431,18 +440,18 @@ Originally written by Henry Minsky (hqm@ai.mit.edu)
 This is Version %s, August 2001
 
 Terms of the GNU Public License apply.
-} $version]
+} $[namespace current]::VERSION]
 }
 
 
 ################################################################
 # This ought to be a generic program to change a variable's value
 proc tkps::changeUpdatePeriod {} {
-    variable UPDATE_PERIOD MIN_UPDATE_PERIOD update_time
+    variable updatePeriod MIN_UPDATE_PERIOD update_time
     variable prompt
 
-    set prev_update_time $UPDATE_PERIOD
-    set update_time $UPDATE_PERIOD
+    set prev_update_time $updatePeriod
+    set update_time $updatePeriod
 
     # create top level window
     widget::dialog [w change [w app].change] \
@@ -468,12 +477,12 @@ proc tkps::changeUpdatePeriod {} {
     # Don't let the updates go too fast.
     if {$button eq "ok"} {
         if {![string is integer -strict $update_time] || $update_time < $MIN_UPDATE_PERIOD} {
-            set UPDATE_PERIOD $MIN_UPDATE_PERIOD
+            set updatePeriod $MIN_UPDATE_PERIOD
         } else {
-            set UPDATE_PERIOD $update_time
+            set updatePeriod $update_time
         }
     } else {
-        set UPDATE_PERIOD $prev_update_time
+        set updatePeriod $prev_update_time
     }
 }
 
@@ -669,9 +678,9 @@ proc tkps::sendSignal {signal} {
 proc tkps::selectedProcesses {} {
     variable pid_column
 
-    lmap i [[w pstable] curselection] {
+    return [lmap i [[w pstable] curselection] {
         lindex [[w pstable] get $i] $pid_column
-    }
+    }]
 }
 
 
@@ -679,13 +688,14 @@ proc tkps::selectedProcesses {} {
 # We want to make sure that we don't update if there is
 # a current selection in the window.
 proc tkps::updateLoop {} {
-    variable UPDATE_PERIOD
+    variable updatePeriod
 
     if {[[w pstable] curselection] == {}} {
         updateUnixProcs
     }
+
     variable currenttime [clock format [clock seconds]]
-    after $UPDATE_PERIOD [namespace current]::updateLoop
+    after $updatePeriod [namespace current]::updateLoop
 }
 
 
@@ -699,14 +709,14 @@ proc tkps::hideProcessDescription {} {
 }
 
 proc tkps::init {} {
-    set systemRCFile "/etc/${tkps::application}rc"
+    set systemRCFile "/etc/${tkps::APPLICATION}rc"
     set userRCFile ""
     switch $::tcl_platform(platform) {
         "unix" {
             if {[info exists ::env(DOTDIR)]} {
-                set userRCFile [file join $::env(DOTDIR) .${tkps::application}rc]
+                set userRCFile [file join $::env(DOTDIR) .${tkps::APPLICATION}rc]
             } else {
-                set userRCFile [file join $::env(HOME) .${tkps::application}rc]
+                set userRCFile [file join $::env(HOME) .${tkps::APPLICATION}rc]
             }
         }
         default {
@@ -724,7 +734,7 @@ proc tkps::init {} {
     option add *header.font fixed
     option add *process.text.font fixed startupFile
 
-    option add [string totitle $tkps::application].title "tkps - Process Manager" startupFile
+    option add [string totitle $tkps::APPLICATION].title "tkps - Process Manager" startupFile
 
     catch {option read $systemRCFile startupFile}
     catch {option read $userRCFile userDefault}
@@ -734,8 +744,6 @@ proc tkps::init {} {
 proc tkps::start {psArgs} {
     variable common_ps_keywords
     variable ALL_ps_keywords
-    variable common_sigs
-    variable all_sigs
     variable posix_sigs
     variable ps_args
     variable DEFAULT_PS_ARGS
@@ -765,16 +773,16 @@ proc tkps::start {psArgs} {
     menu $m.options.sortoptions
     $m.options.sortoptions add command \
         -label "USER" \
-        -command {set sortoption "--sort user"}
+        -command [list namespace eval $ns {set sortOption "--sort user"}]
     $m.options.sortoptions add command \
         -label "UID" \
-        -command {set sortoption "--sort uid"}
+        -command [list namespace eval $ns {set sortOption "--sort uid"}]
     $m.options.sortoptions add command \
         -label "%CPU" \
-        -command {set sortoption "--sort -pcpu"}
+        -command [list namespace eval $ns {set sortOption "--sort -pcpu"}]
     $m.options.sortoptions add command \
         -label "PID" \
-        -command {set sortoption -Op}
+        -command [list namespace eval $ns {set sortOption "-Op"}]
 
     $m.options add checkbutton \
         -label "Confirm Signals" \
@@ -803,15 +811,15 @@ proc tkps::start {psArgs} {
 
     menu $m.signals.com_signals
     $m.signals add cascade -label "Common Signals" -menu $m.signals.com_signals
-    addItems $m.signals.com_signals $common_sigs
+    addItems $m.signals.com_signals $tkps::SIGNALS(COMMON)
 
     menu $m.signals.all_signals
     $m.signals add cascade -label "POSIX Signals" -menu $m.signals.posix_signals
-    addItems $m.signals.all_signals $all_sigs
+    addItems $m.signals.all_signals $tkps::SIGNALS(ALL)
 
     menu $m.signals.posix_signals
     $m.signals add cascade -label "All Signals" -menu $m.signals.all_signals
-    addItems $m.signals.posix_signals $posix_sigs
+    addItems $m.signals.posix_signals $tkps::SIGNALS(POSIX)
 
     $m.help add command -label "Help" -command ${ns}::showHelp
 
