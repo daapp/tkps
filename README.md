@@ -1,4 +1,4 @@
-# tkps - display OS processes.
+# tkps - GUI  wrapper around "ps" and "kill" commands.
 
 Currently work on Linux only. Rewrite of TkPS by Henry Minsky and others.
 
